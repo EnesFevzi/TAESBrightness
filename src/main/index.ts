@@ -22,8 +22,6 @@ let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
 let isDev: boolean;
 let settingsOpen: boolean = false;
-let blurTimeout: ReturnType<typeof setTimeout> | null = null;
-let lastTrayShowTime = 0;
 
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -184,17 +182,6 @@ function createWindow(): void {
     mainWindow?.show();
   });
 
-  mainWindow.on("blur", () => {
-    if (!isDev && !settingsOpen && Date.now() - lastTrayShowTime > 500) {
-      blurTimeout = setTimeout(() => {
-        blurTimeout = null;
-        if (mainWindow && !mainWindow.isDestroyed() && !settingsOpen) {
-          mainWindow.hide();
-        }
-      }, 200);
-    }
-  });
-
   if (isDev && process.env["ELECTRON_RENDERER_URL"]) {
     mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
   } else {
@@ -235,17 +222,8 @@ function createTray(): void {
     tray.setContextMenu(contextMenu);
     tray.on("click", () => {
       if (mainWindow?.isVisible()) {
-        if (blurTimeout) {
-          clearTimeout(blurTimeout);
-          blurTimeout = null;
-        }
         mainWindow.hide();
       } else {
-        if (blurTimeout) {
-          clearTimeout(blurTimeout);
-          blurTimeout = null;
-        }
-        lastTrayShowTime = Date.now();
         const trayBounds = tray?.getBounds();
         const winBounds = mainWindow?.getBounds();
         if (trayBounds && winBounds) {
