@@ -23,6 +23,7 @@ let mainWindow: BrowserWindow | null = null;
 let isDev: boolean;
 let settingsOpen: boolean = false;
 let blurTimeout: ReturnType<typeof setTimeout> | null = null;
+let lastTrayShowTime = 0;
 
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -184,7 +185,7 @@ function createWindow(): void {
   });
 
   mainWindow.on("blur", () => {
-    if (!isDev && !settingsOpen) {
+    if (!isDev && !settingsOpen && Date.now() - lastTrayShowTime > 500) {
       blurTimeout = setTimeout(() => {
         blurTimeout = null;
         if (mainWindow && !mainWindow.isDestroyed() && !settingsOpen) {
@@ -244,6 +245,7 @@ function createTray(): void {
           clearTimeout(blurTimeout);
           blurTimeout = null;
         }
+        lastTrayShowTime = Date.now();
         const trayBounds = tray?.getBounds();
         const winBounds = mainWindow?.getBounds();
         if (trayBounds && winBounds) {
