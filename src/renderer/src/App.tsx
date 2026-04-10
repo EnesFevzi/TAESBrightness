@@ -9,6 +9,7 @@ import {
   Keyboard,
   ShieldAlert,
   Moon,
+  Zap,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MonitorInfo, AppSettings } from "./env";
