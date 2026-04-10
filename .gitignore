@@ -1,0 +1,24 @@
+# Build and Output
+out/
+dist/
+.temp/
+*.log
+
+# Dependencies
+node_modules/
+
+# IDE and Editor
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Git
+.git/
+
+# OS Files
+Thumbs.db
+Desktop.ini

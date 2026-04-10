@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(powershell -Command \"Get-Process -Name 'Lumina Control' -ErrorAction SilentlyContinue | Stop-Process -Force\")",
+      "Bash(powershell -NoProfile -Command 'Write-Output '\\\\''=== WMI Monitor Names ==='\\\\''; Get-CimInstance -Namespace root/wmi -ClassName WmiMonitorID | Sort-Object InstanceName | ForEach-Object { $f = if \\($_.UserFriendlyName\\) { -join \\($_.UserFriendlyName | Where-Object { $_ -ne 0 } | ForEach-Object { [char]$_ }\\) } else { '\\\\'''\\\\'' }; $m = if \\($_.ManufacturerName\\) { -join \\($_.ManufacturerName | Where-Object { $_ -ne 0 } | ForEach-Object { [char]$_ }\\) } else { '\\\\'''\\\\'' }; Write-Output \\('\\\\''  Instance: '\\\\'' + $_.InstanceName + '\\\\'' | Name: '\\\\'' + $f + '\\\\'' | Mfr: '\\\\'' + $m\\) }; Write-Output '\\\\'''\\\\''; Write-Output '\\\\''=== DDC/CI capable \\(PnP\\) ==='\\\\''; Get-PnpDevice -Class Monitor -Status OK | ForEach-Object { Write-Output \\('\\\\''  '\\\\'' + $_.InstanceId + '\\\\'' | '\\\\'' + $_.FriendlyName\\) }')"
+    ]
+  }
+}
