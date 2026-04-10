@@ -217,20 +217,49 @@ export class MonitorManager {
 
     try {
       if (state) {
-        // Wake up attempt: Send multiple commands
-        await ddcci._setVCP(id, 0xd6, 1);
-        await new Promise((r) => setTimeout(r, 600));
-        await ddcci._setVCP(id, 0xd6, 1);
+        try {
+          const wakeScript = `
+Add-Type -TypeDefinition '
+using System;
+using System.Runtime.InteropServices;
+public class MonitorPower {
+  [DllImport("user32.dll")]
+  public static extern IntPtr SendMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
+  [DllImport("user32.dll")]
+  public static extern IntPtr GetDesktopWindow();
+}
+' -PassThru | Select-Object -First 1 | Out-Null
+$HWND = [MonitorPower]::GetDesktopWindow()
+[MonitorPower]::SendMessage($HWND, 0x0112, [IntPtr]0xF170, [IntPtr]2) | Out-Null
+Start-Sleep -Milliseconds 500
+[MonitorPower]::SendMessage($HWND, 0x0112, [IntPtr]0xF170, [IntPtr]2) | Out-Null
+Start-Sleep -Milliseconds 500
+`.trim();
+          await execAsync(encodePsCommand(wakeScript), { timeout: 5000 });
+        } catch {
+          /* ignore wake signal errors */
+        }
+
+        try {
+          await ddcci._setVCP(id, 0xd6, 1);
+          await new Promise((r) => setTimeout(r, 800));
+          await ddcci._setVCP(id, 0xd6, 1);
+        } catch {
+          /* monitor may not respond yet */
+        }
 
         if (monitor.brightness === 0) {
-          await ddcci.setBrightness(id, 10);
-          monitor.brightness = 10;
+          try {
+            await ddcci.setBrightness(id, 10);
+            monitor.brightness = 10;
+          } catch {
+            /* ignore */
+          }
         }
       } else {
         await ddcci._setVCP(id, 0xd6, 4);
       }
       monitor.enabled = state;
-      // We keep it in the list! The key fix.
     } catch (e) {
       console.error("Failed to toggle power:", e);
     }
