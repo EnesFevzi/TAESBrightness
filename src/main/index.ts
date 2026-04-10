@@ -22,6 +22,7 @@ let tray: Tray | null = null;
 let mainWindow: BrowserWindow | null = null;
 let isDev: boolean;
 let settingsOpen: boolean = false;
+let blurTimeout: ReturnType<typeof setTimeout> | null = null;
 
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -70,6 +71,17 @@ class AutomationEngine {
 
   async start() {
     setInterval(() => this.check(), 2000);
+  }
+
+  private async applyPresetById(presetId: string): Promise<void> {
+    try {
+      const monitors = await monitorManager.refreshMonitors();
+      for (const m of monitors) {
+        await monitorManager.setBrightness(m.id, parseInt(presetId, 10) || 50);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
   private async check() {
@@ -173,12 +185,12 @@ function createWindow(): void {
 
   mainWindow.on("blur", () => {
     if (!isDev && !settingsOpen) {
-      // Give a small delay to prevent accidental hiding during interactions
-      setTimeout(() => {
-        if (mainWindow && !settingsOpen) {
+      blurTimeout = setTimeout(() => {
+        blurTimeout = null;
+        if (mainWindow && !mainWindow.isDestroyed() && !settingsOpen) {
           mainWindow.hide();
         }
-      }, 100);
+      }, 200);
     }
   });
 
@@ -221,8 +233,17 @@ function createTray(): void {
     tray.setToolTip("Lumina Control");
     tray.setContextMenu(contextMenu);
     tray.on("click", () => {
-      if (mainWindow?.isVisible()) mainWindow.hide();
-      else {
+      if (mainWindow?.isVisible()) {
+        if (blurTimeout) {
+          clearTimeout(blurTimeout);
+          blurTimeout = null;
+        }
+        mainWindow.hide();
+      } else {
+        if (blurTimeout) {
+          clearTimeout(blurTimeout);
+          blurTimeout = null;
+        }
         const trayBounds = tray?.getBounds();
         const winBounds = mainWindow?.getBounds();
         if (trayBounds && winBounds) {
