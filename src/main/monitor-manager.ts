@@ -4,6 +4,16 @@ import ddcci from "@hensm/ddcci";
 
 const execAsync = promisify(exec);
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error("Timeout")), ms);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 function encodePsCommand(script: string): string {
   const encoded = Buffer.from(script, "utf16le").toString("base64");
   return `powershell -NoProfile -EncodedCommand ${encoded}`;
@@ -38,9 +48,15 @@ export class MonitorManager {
 
   async refreshMonitors(): Promise<MonitorInfo[]> {
     this.claimedWmiIds.clear();
-    await this.refreshWmiMonitors();
-    await this.refreshInternalMonitors();
-    await this.refreshExternalMonitors();
+    try {
+      await withTimeout(this.refreshWmiMonitors(), 10000);
+    } catch { /* ignore */ }
+    try {
+      await withTimeout(this.refreshInternalMonitors(), 8000);
+    } catch { /* ignore */ }
+    try {
+      await withTimeout(this.refreshExternalMonitors(), 10000);
+    } catch { /* ignore */ }
     return Array.from(this.knownMonitors.values());
   }
 
@@ -153,7 +169,7 @@ export class MonitorManager {
       await Promise.all(
         monitorIds.map(async (id) => {
           try {
-            const brightness = await ddcci.getBrightness(id);
+            const brightness = await withTimeout(ddcci.getBrightness(id), 3000);
             const existing = this.knownMonitors.get(id);
 
             const monitor: MonitorInfo = {
